@@ -205,10 +205,28 @@ async def set_tournament_date(message: types.Message, state: FSMContext):
         await message.answer("❌ Добавление турнира отменено.", reply_markup=admin_kb())
         return
     
-    if not re.match(r'\d{2}\.\d{2}\.\d{4}', message.text):
-        await message.answer("❌ Неверный формат даты! Используйте дд.мм.гггг")
+    # Проверяем базовый формат
+    if not re.match(r'^\d{2}\.\d{2}\.\d{4}$', message.text):
+        await message.answer("❌ Неверный формат даты! Используйте дд.мм.гггг (например: 15.12.2024)")
         return
     
+    # Проверяем, что дата действительна
+    try:
+        day, month, year = map(int, message.text.split('.'))
+        # Проверяем существование даты
+        datetime(year, month, day)
+        
+        # Проверяем что дата в будущем
+        input_date = datetime(year, month, day)
+        if input_date < datetime.now():
+            await message.answer("❌ Дата должна быть в будущем! Введите корректную дату:")
+            return
+            
+    except ValueError:
+        await message.answer("❌ Несуществующая дата! Проверьте число и месяц (например: 31.04.2024 - не существует)")
+        return
+    
+    # Если все проверки пройдены, сохраняем дату
     await state.update_data(date=message.text)
     await AddTournament.next()
     await message.answer("💰 Введите призовой фонд:", reply_markup=cancel_kb())
@@ -632,4 +650,5 @@ if __name__ == '__main__':
         logger.error(f"Ошибка: {e}")
     finally:
         conn.close()
+
         logger.info("Бот остановлен")
